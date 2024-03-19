@@ -12,6 +12,7 @@ public class AttendanceManager {
 
     public AttendanceManager() {
         connection = DBConnectionManager.getConnection();
+        attendanceRecords = new ArrayList<>();
     }
 
     public List<AttendanceRecord> getAttendanceRecord() {
@@ -35,21 +36,37 @@ public class AttendanceManager {
 
     public boolean recordAttendance(int classId, int userId, String status) {
         AttendanceRecord newAttendaceRecord = new AttendanceRecord(attendanceRecords.size() + 1, classId, userId, status);
+
+        try {
+            // Persiapkan pernyataan untuk menyisipkan catatan kehadiran ke dalam database
+            PreparedStatement statement = connection.prepareStatement("INSERT INTO attendance_records (class_id, user_id, status) VALUES (?, ?, ?)");
+            statement.setInt(1, classId);
+            statement.setInt(2, userId);
+            statement.setString(3, status);
+
+            // Jalankan pernyataan untuk menyisipkan catatan kehadiran
+            int rowsAffected = statement.executeUpdate();
+
+            // Tutup pernyataan
+            statement.close();
+
+            // Jika operasi insert berhasil (ada baris yang terpengaruh), kembalikan true
+            if (rowsAffected > 0) {
+                return true;
+            } else {
+                return false;
+            }
+        }catch (SQLException e){
+            e.printStackTrace();
+            System.exit(1);
+        }
+
+
         for (AttendanceRecord record :
                 attendanceRecords) {
             if (record.getClassId() == newAttendaceRecord.getClassId()
                     && record.getUserId() != newAttendaceRecord.getUserId()) {
                 attendanceRecords.add(newAttendaceRecord);
-                try {
-                    PreparedStatement statement = connection.prepareStatement("INSERT into attendance_records (class_id,user_id,status) values (? ,? ,?)");
-                    statement.setInt(1,classId);
-                    statement.setInt(2,userId);
-                    statement.setString(3,status);
-                }catch (SQLException e){
-                    e.printStackTrace();
-                    System.exit(1);
-                }
-                return true;
             }
         }
         return false;
